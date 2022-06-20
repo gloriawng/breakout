@@ -1,26 +1,43 @@
-#Name: Breakout Arcade Game
-#Programmer: Gloria Wang & Mark Chen
-#Date: May 10, 2022
-#Description: This game allows a user to play a version of Atari's Breakout Arcade Game
+add_library('minim')
 
-displayScreen = 1
+displayScreen = 0
 gameWon = False
 lives = 3
 score = 0
 ballX = random(1000)
 ballY = 550
-ballSpeedX = -2
-ballSpeedY = -2
+ballSpeedX = -1
+ballSpeedY = -1
+bricks = [ [True, True, True, True, True, True, True, True, True], [True, True, True, True, True, True, True, True, True], [True, True, True, True, True, True, True, True, True], [True, True, True, True, True, True, True, True, True], [True, True, True, True, True, True, True, True, True] ]
+brickX = 0
+brickY = 0
+brickColour = 0
+brickCounter = 0
+musicPlay = True
+gamePause = False
+level = 1
+time = 0
+
 
 def setup():
-    global logo, life, start
+    global logo, life, start, music, song, replay, play, pause, win, lose
     size(1000, 600)
     background(0)
     textAlign(CENTER)
     logo = loadImage('breakoutlogo.gif')
     life = loadImage('lifeicon1.png')
     start = loadImage('start1.png')
+    music = loadImage('music1.png')
+    replay = loadImage('playagain1.png')
+    play = loadImage('play1.png')
+    pause = loadImage('pause1.png')
+    win = loadImage('win.jpg')
+    lose = loadImage('gameover1.jpg')
     
+    minim = Minim(this)
+    song = minim.loadFile("Song.mp3")
+    song.loop()
+
 
 def draw():
     background(0)    
@@ -30,7 +47,6 @@ def draw():
         endScreen()
     elif displayScreen == 1:
         gameScreen()
-
 
 
 def startScreen():
@@ -55,9 +71,12 @@ def startScreen():
     image(start, 425, 450)
     
     
-    
 def gameScreen():
-    global ballX, ballY, ballSpeedX, ballSpeedY, lives, mouseX
+    global ballX, ballY, ballSpeedX, ballSpeedY, lives, mouseX, displayScreen, gameWon, paddleLeft, level, bricks, musicPlay, gamePause, time
+    
+    #Timer
+    time += 1
+    timer()
         
     #Settings bar
     fill(160)
@@ -72,17 +91,36 @@ def gameScreen():
         image(life, 15, 10)
         image(life, 55, 10)     
     if lives == 1:
-        image(life, 15, 10)
+        image(life, 15, 10)    
+    if lives == 0:
+        displayScreen = 2
+        gameWon = False
+        
+    #Music play/pause
+    image(music, 955, 10)
+    
+    #Play or pause the game
+    if gamePause == True:
+        image(play, 915, 10)
+    elif gamePause == False:
+        image(pause, 915, 10)
     
     #Score indicator
+    textAlign(LEFT)
     msg = "SCORE: " + str(score)
     textSize(30)
     fill(0)
-    text(msg, 210, 35)
+    text(msg, 140, 35)
+    
+    brick()
     
     #Ball
-    ballX += ballSpeedX
-    ballY += ballSpeedY
+    if gamePause == False:
+        ballX += ballSpeedX
+        ballY += ballSpeedY
+    if gamePause == True:
+        ballX += 0
+        ballY += 0   
     fill(120)
     ball = ellipse(ballX, ballY, 18, 18)
     
@@ -96,31 +134,153 @@ def gameScreen():
         ballY = height - 9
         ballSpeedX = 0
         lives -= 1 #Keeps on deleting lives until 0 // ntbf
+        ballSpeedX = -2
+        ballSpeedY = -2
+        delay(1000) #Gives user time to prepare for next play
     elif ballY - 9 <= 50:
         ballSpeedY = -ballSpeedY
         ballY = 59
-        
-    fill(0, 0, 255)
-    paddle = rect(mouseX, 550, 160, 20) #mouseX is left most side, should be center // ntbf
     
+    fill(0, 0, 255)
+    paddleLeft = mouseX - 80
+    rect(paddleLeft, 550, 160, 20)
     if mouseX < 0:
-        mouseX = 0
+        paddleLeft = -80
+    if mouseX > 1000: 
+        paddleLeft = 920
     
     if ballY + 9 >= 550:
-        if ballX >= mouseX and ballX < (mouseX + 80):
+        if ballX >= paddleLeft and ballX < paddleLeft + 80:
             ballSpeedY = -ballSpeedY
             ballY = 541
-        if ballX >= (mouseX + 80) and ballX <= (mouseX + 160):
+            if ballSpeedX > 0:
+                ballSpeedX = -ballSpeedX
+        if ballX >= paddleLeft + 80 and ballX <= paddleLeft + 160:
             ballSpeedY = -ballSpeedY
             ballSpeedX = -ballSpeedX
             ballY = 541
+            if ballSpeedX < 0:
+                ballSpeedX = -ballSpeedX
+              
                 
+    if level == 3 and bricks == [ [False, False, False, False, False, False, False, False, False], [False, False, False, False, False, False, False, False, False], [False, False, False, False, False, False, False, False, False], [False, False, False, False, False, False, False, False, False], [False, False, False, False, False, False, False, False, False] ]:
+        displayScreen = 2
+        gameWon = True
+    elif level != 3 and bricks == [ [False, False, False, False, False, False, False, False, False], [False, False, False, False, False, False, False, False, False], [False, False, False, False, False, False, False, False, False], [False, False, False, False, False, False, False, False, False], [False, False, False, False, False, False, False, False, False] ]:
+        level += 1
+        bricks = [ [True, True, True, True, True, True, True, True, True], [True, True, True, True, True, True, True, True, True], [True, True, True, True, True, True, True, True, True], [True, True, True, True, True, True, True, True, True], [True, True, True, True, True, True, True, True, True] ]
+        lives = 3
+        ballX = random(1000)
+        ballY = height - 9
+
+    #Play or pause the game images
+    if gamePause == True:
+        image(play, 915, 10)
+    if gamePause == False:
+        image(pause, 915, 10)
         
+
+                    
 def endScreen():
-    pass
+    
+    #Score box
+    textAlign(CENTER)
+    textSize(50)
+    fill(255)
+    text("SCORE: " + str(score), 500, 280)
+    
+    image(replay, 397, 450)
+    
+    if gameWon == True:
+        image(win, 288, 100)
+    if gameWon == False:
+        image(lose, 287, 100)
+        
+    
 
 
-def mouseClicked():
-    global displayScreen
+def brick():
+    global ballSpeedX, ballSpeedY, score
+    for i in range(5):
+        for j in range(9):
+            if i == 0:
+                fill(255, 0, 0)
+                points = 50
+            if i == 1:
+                fill(255, 140, 0)
+                points = 40
+            if i == 2:
+                fill(255, 255, 0)
+                points = 30
+            if i == 3:
+                fill(0, 255, 0)
+                points = 20
+            if i == 4:
+                fill(0, 0, 255)
+                points = 10
+                
+            if bricks[i][j] == True:
+                rect(j * 100 + (j + 1) * 10, i * 40 + (i + 1) * 10 + level * 50, 100, 40)
+
+                #Interaction with blocks // ntbf
+                if ballX + 9 == j * 100 + (j + 1) * 10 and ballY + 9 >= i * 40 + (i + 1) * 10 + level * 50 and ballY - 9 <= i * 40 + (i + 1) * 10 + level * 50 + 40:
+                    ballSpeedX = -ballSpeedX
+                    bricks[i][j] = False
+                    score += points
+                if ballX - 9 == j * 100 + (j + 1) * 10 + 100 and ballY + 9 >= i * 40 + (i + 1) * 10 + level * 50 and ballY - 9 <= i * 40 + (i + 1) * 10 + level * 50 + 40:
+                    ballSpeedX = -ballSpeedX
+                    bricks[i][j] = False
+                    score += points
+                if ballY + 9 == i * 40 + (i + 1) * 10 + level * 50 and ballX + 9 >= j * 100 + (j + 1) * 10 and ballX - 9 <= j * 100 + (j + 1) * 10 + 100:
+                    ballSpeedY = -ballSpeedY
+                    bricks[i][j] = False
+                    score += points
+                if ballY - 9 == i * 40 + (i + 1) * 10 + level * 50 + 40 and ballX + 9 >= j * 100 + (j + 1) * 10 and ballX - 9 <= j * 100 + (j + 1) * 10 + 100:
+                    ballSpeedY = -ballSpeedY
+                    bricks[i][j] = False
+                    score += points
+                    
+            if bricks[i] == False:
+                ballSpeedX = ballSpeedX * 1.25
+                ballSpeedY = ballSpeedY * 1.25
+            
+
+
+                
+
+def mousePressed():
+    global displayScreen, bricks, lives, score, song, musicPlay, gamePause
+
     if displayScreen == 0 and mouseX >= 425 and mouseX <= 575 and mouseY >= 450 and mouseY <= 525:
         displayScreen = 1
+        
+    if displayScreen == 2 and mouseX >= 397 and mouseX <= 603 and mouseY >= 450 and mouseY <= 525:
+        displayScreen = 0
+        for i in range(5):
+            for j in range(9):
+                score = 0
+                lives = 3
+                bricks[i][j] = True
+                level = 0
+    
+    #Play or pause the music by pressing on the music icon
+    if mouseX >= 955 and mouseY <= 40:
+        if musicPlay == True:
+            song.pause()            
+            musicPlay = False
+        else:
+            song.play()
+            musicPlay = True
+
+            
+    if mouseX >= 915 and mouseX < 955 and mouseY <= 40:
+        if gamePause == True:
+            gamePause = False
+        else:
+            gamePause = True
+            
+def timer():
+    global timer, ballSpeedX, ballSpeedY
+    if time == 240:
+        ballSpeedX = ballSpeedX * 2
+        ballSpeedY = ballSpeedY * 2
